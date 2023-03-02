@@ -1,0 +1,658 @@
+% IR_script2.m
+% 20230218 Div Bolar MD, PHD UCSD
+
+% Inversion Recovery %
+TI_IR = [  120; 200; 350; 400; 600; 800; 1000; 1200; 1400; 1600; 1800; 2000; 2500; 3000]';
+
+
+figure
+
+forROIdrawing = IR_data(j).img;
+image(IR_data(j).img);
+colormap ("gray");  axis square
+
+% -----------------------------------------
+% Use "drawcircle"to selective a decent size ROI from center of image. 
+
+display('**********************')
+display('***** Draw ROI! ******')
+display('**********************')
+
+title('Draw ROI!', 'FontSize', 18)
+
+ROI = drawcircle(gca);  %% PLEASE INTERACT WITH IMAGE
+mask = createMask(ROI);
+
+% ------------------------------------
+
+% This applies the mask you just created to ALL the images in the series
+
+for k = 1:length(IR_data)
+    meanSI_IR(k) = mean ( IR_data(k).img(mask)) ;
+end
+    
+
+%%
+% Now, you have your mean signal intensity for the ROI across all TIs
+meanSI_IR
+
+% And your TIs
+TI_IR
+
+%%  Plot SI versus TI
+figure
+plot (TI_IR, meanSI_IR, 'bo'); hold 
+plot(TI_IR, meanSI_IR, 'r-')
+
+title ('SI versus TI -- Inversion Recovery', 'FontSize', 18)
+xlabel(' TI (ms)', 'FontSize', 14)
+ylabel('SI (AU)', 'FontSize', 14)
+
+% -----------------------------------
+%% Fixing the data
+min_all = 10^9;
+for i = 1:length(meanSI_IR)
+
+    if min_all > meanSI_IR(i)
+            min_all = meanSI_IR(i);
+            y_new_data(i) = -meanSI_IR(i);
+    else
+            y_new_data(i) = meanSI_IR(i);
+    end
+end
+% bring_to_0 = abs(min(y_new_data));
+% for i = 1:length(y_new_data)
+%     y_new_data(i) = y_new_data(i) + bring_to_0;
+% end
+
+%%  Plot SI versus TI
+figure
+plot (TI_IR, y_new_data, 'bo'); hold 
+plot(TI_IR, y_new_data, 'r-')
+
+title ('SI versus TI -- Inversion Recovery', 'FontSize', 18)
+xlabel(' TI (ms)', 'FontSize', 14)
+ylabel('SI (AU)', 'FontSize', 14)
+
+%% Fitting
+
+xdata = TI_IR;
+ydata = y_new_data;
+M0_init = y_new_data(end);
+T1_water_init = 500;
+Mz0 = y_new_data(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+% fun = @(x,xdata)x(1)*(1-exp(-xdata/x(2)));
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init,T1_water_init, Mz0];
+x = lsqcurvefit(fun,x0,xdata,ydata)
+figure;
+times = linspace(xdata(1),3000);
+plot(xdata,ydata,'ko',times,fun(x,times),'b-')
+legend('Data','Fitted exponential')
+title('Data and Fitted Curve')
+
+%%
+TI_IR = [  116; 120; 200; 300; 400; 500; 600; 700; 800; 900; 1000; 1200]';
+meanSI_IR_TL =    [  -298; -292; -180; -63;  37;  111; 175; 227; 270; 305; 334;  378]';
+
+meanSI_IR_Middle =    [  -331; -319; -103; 109;  271;  395; 489; 560; 616; 658; 690;  733]';
+meanSI_IR_BR =    [  -290; -286; -200; -107;  -28;  40; 96; 145; 187; 223; 253;  301]';
+
+%% Fixing the data
+% min_all = 10^9;
+% for i = 1:length(meanSI_IR)
+%     
+%     if min_all > meanSI_IR(i)
+%             min_all = meanSI_IR(i);
+%             y_new_data(i) = -meanSI_IR(i);
+%     else
+%             y_new_data(i) = meanSI_IR(i);
+%     end
+% end
+% bring_to_0 = abs(min(y_new_data));
+% for i = 1:length(y_new_data)
+%     y_new_data(i) = y_new_data(i) + bring_to_0;
+% end
+%% Fitting one
+% xdata = TI_IR;
+% ydata = meanSI_IR;
+% M0_init = -meanSI_IR(end);
+% T1_water_init = 500;
+% Mz0 = meanSI_IR(1);
+% % x(1) = M0
+% % x(2) = T1_water
+% % x(3) = Mz0
+% % fun = @(x,xdata)x(1)*(1-exp(-xdata/x(2)));
+% fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+% x0 = [M0_init,T1_water_init, Mz0];
+% x = lsqcurvefit(fun,x0,xdata,ydata)
+% figure;
+% times = linspace(xdata(1),3000);
+% plot(xdata,ydata,'ko',times,fun(x,times),'b-')
+% legend('Data','Fitted exponential')
+% title('Data and Fitted Curve')
+
+% TL
+xdata = TI_IR;
+ydata_TL = meanSI_IR_TL;
+M0_init_TL = -meanSI_IR_TL(end);
+T1_water_init = 500;
+Mz0_TL = meanSI_IR_TL(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_TL,T1_water_init, Mz0_TL];
+x_TL = lsqcurvefit(fun,x0,xdata,ydata_TL)
+times = linspace(0,3000, 300000);
+
+% Middle
+xdata = TI_IR;
+ydata_Middle = meanSI_IR_Middle;
+M0_init_Middle = -meanSI_IR_Middle(end);
+T1_water_init = 500;
+Mz0_Middle = meanSI_IR_Middle(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_Middle,T1_water_init, Mz0_Middle];
+x_Middle = lsqcurvefit(fun,x0,xdata,ydata_Middle)
+times = linspace(0,3000, 300000);
+
+% BR
+xdata = TI_IR;
+ydata_BR = meanSI_IR_BR;
+M0_init_BR = -meanSI_IR_BR(end);
+T1_water_init = 500;
+Mz0_BR = meanSI_IR_BR(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_BR,T1_water_init, Mz0_BR];
+x_BR = lsqcurvefit(fun,x0,xdata,ydata_BR)
+times = linspace(0,3000, 300000);
+
+
+figure;
+
+plot(xdata,ydata_TL    ,'bo', times,fun(x_TL    ,times),'b-')
+hold on
+plot(xdata,ydata_Middle,'ro', times,fun(x_Middle,times),'r-')
+plot(xdata,ydata_BR    ,'go', times,fun(x_BR    ,times),'g-')
+% Add a dashed line at y=0
+yline(0, '--');
+hold off
+lgd = legend('Data Top Left','Fitted curve TL','Data Middle','Fitted curve Mid','Data Bottom Right','Fitted curve BR','Location', 'east');
+xlabel('time (ms)')
+ylabel('Mz')
+title ('SI versus TI -- Inversion Recovery', 'FontSize', 18)
+
+%%
+% Get values of each curve at y = 0
+x_intersect_TL = interp1(fun(x_TL, times), times, 0);
+y_intersect_TL = 0;
+
+x_intersect_Middle = interp1(fun(x_Middle, times), times, 0);
+y_intersect_Middle = 0;
+
+x_intersect_BR = interp1(fun(x_BR, times), times, 0);
+y_intersect_BR = 0;
+
+% Display the values
+fprintf('Intersection with y=0 for TL: (%f, %f)\n', x_intersect_TL, y_intersect_TL);
+fprintf('Intersection with y=0 for Middle: (%f, %f)\n', x_intersect_Middle, y_intersect_Middle);
+fprintf('Intersection with y=0 for BR: (%f, %f)\n', x_intersect_BR, y_intersect_BR);
+
+
+%%
+% TL
+xdata = TI_IR;
+ydata_TL = meanSI_IR_TL;
+M0_init_TL = -meanSI_IR_TL(end);
+T1_water_init = 500;
+Mz0_TL = meanSI_IR_TL(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_TL,T1_water_init, Mz0_TL];
+x_TL = lsqcurvefit(fun,x0,xdata,ydata_TL)
+times = linspace(0,3000, 300000);
+
+% Middle
+xdata = TI_IR;
+ydata_Middle = meanSI_IR_Middle;
+M0_init_Middle = -meanSI_IR_Middle(end);
+T1_water_init = 500;
+Mz0_Middle = meanSI_IR_Middle(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_Middle,T1_water_init, Mz0_Middle];
+x_Middle = lsqcurvefit(fun,x0,xdata,ydata_Middle)
+times = linspace(0,3000, 300000);
+
+% BR
+xdata = TI_IR;
+ydata_BR = meanSI_IR_BR;
+M0_init_BR = -meanSI_IR_BR(end);
+T1_water_init = 500;
+Mz0_BR = meanSI_IR_BR(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_BR,T1_water_init, Mz0_BR];
+x_BR = lsqcurvefit(fun,x0,xdata,ydata_BR)
+times = linspace(0,3000, 300000);
+
+
+figure;
+
+plot(xdata,ydata_TL    ,'bo', times,fun(x_TL    ,times),'b-')
+hold on
+plot(xdata,ydata_Middle,'ro', times,fun(x_Middle,times),'r-')
+plot(xdata,ydata_BR    ,'go', times,fun(x_BR    ,times),'g-')
+% Add a dashed line at y=0
+yline(0, '--');
+
+% Plot intersection points
+y_TL = interp1(fun(x_TL, times), times, 0);
+y_Middle = interp1(fun(x_Middle, times), times, 0);
+y_BR = interp1(fun(x_BR, times), times, 0);
+plot(y_TL, 0, 'kx', 'MarkerSize', 10)
+hold on
+plot(y_Middle, 0, 'kx', 'MarkerSize', 10)
+plot(y_BR, 0, 'kx', 'MarkerSize', 10)
+hold off
+
+hold off
+% Add text boxes with intersection values
+text(y_TL-50, 20, sprintf('TL: %.1f ms', y_TL),'FontSize',20);
+text(y_Middle-150, -20, sprintf('Middle: %.1f ms', y_Middle),'FontSize',20);
+text(y_BR, -20, sprintf('BR: %.1f ms', y_BR),'FontSize',20);
+
+lgd = legend('Data Top Left','Fitted curve TL','Data Middle','Fitted curve Mid','Data Bottom Right','Fitted curve BR','Location', 'east');
+lgd.FontSize = 25;
+xx = xlabel('time (ms)');
+yy = ylabel('Mz');
+xx.FontSize = 20;
+yy.FontSize = 20;
+set(gca,'FontSize',25)
+title ('SI versus TI -- Inversion Recovery', 'FontSize',25)
+
+
+
+%%
+
+filename = '/Users/arthurlefebvre/MATLAB/Projects/MATLAB_scripts_data/Lab07_Data_NIFTI/PHANTOM/tfl_IR_TI0600_20230223174715_10.nii';
+
+% filename = '/Users/arthurlefebvre/MATLAB/Projects/MATLAB_scripts_data/Lab07_Data_NIFTI/PHANTOM/tfl_IR_TI1000_20230223174715_14.nii';
+
+info = niftiinfo(filename);
+
+% Replace "example.nii" with the filename of your NIfTI file
+header = niftiinfo(filename);
+
+% Access the slice thickness value from the header
+slice_thickness = header.PixelDimensions(3)
+
+% Load NIfTI header using the NIfTI toolbox
+nii = load_nii(filename);
+
+% Extract FOV information from the header
+dim = nii.hdr.dime.dim(2:4); % dimensions of the image
+pixdim = nii.hdr.dime.pixdim(2:4); % voxel sizes in mm
+
+% Calculate FOV in mm
+FOV = dim .* pixdim
+
+
+flip_angle = nii.hdr.hist.srow_x(1, 4)
+
+
+% Load the NIfTI header
+nii_hdr = load_nii_hdr(filename);
+% Display the bandwidth
+bandwidth = nii_hdr.dime.pixdim(5);
+disp(['Bandwidth: ' num2str(bandwidth)]);
+
+% Load the NIfTI header
+nii = load_nii(filename);
+
+% Get the echo time from the header
+TE = nii.hdr.dime.pixdim(5)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+
+
+%% BRAIN
+
+% IR_script2.m
+% 20230218 Div Bolar MD, PHD UCSD
+
+% Inversion Recovery %
+TI_IR = [  200; 400; 600; 700; 800; 900; 1000; 1200; 1400; 1600; 1800; 2000; 2200; 2400; 2600; 2800; 3000; 3200; 3400; 3600; 4000; 5000; 6000; 8000; 9000]';
+
+
+%% Gray matter
+figure
+
+forROIdrawing = IR_data(1).img;
+image(IR_data(1).img);
+colormap ("gray");  axis square
+
+% -----------------------------------------
+% Use "drawcircle"to selective a decent size ROI from center of image. 
+
+display('**********************')
+display('***** Draw ROI Gray matter ! ******')
+display('**********************')
+
+title('Draw ROI Gray matter!', 'FontSize', 18)
+
+ROI = drawcircle(gca);  %% PLEASE INTERACT WITH IMAGE
+mask = createMask(ROI);
+
+% ------------------------------------
+
+% This applies the mask you just created to ALL the images in the series
+
+for k = 1:length(IR_data)
+    meanSI_IR(k) = mean ( IR_data(k).img(mask)) ;
+end
+    
+% Now, you have your mean signal intensity for the ROI across all TIs
+meanSI_IR_GM = meanSI_IR
+
+% And your TIs
+TI_IR
+
+%% White matter
+figure
+
+forROIdrawing = IR_data(1).img;
+image(IR_data(1).img);
+colormap ("gray");  axis square
+
+% -----------------------------------------
+% Use "drawcircle"to selective a decent size ROI from center of image. 
+
+display('**********************')
+display('***** Draw ROI White matter! ******')
+display('**********************')
+
+title('Draw ROI White matter!', 'FontSize', 18)
+
+ROI = drawcircle(gca);  %% PLEASE INTERACT WITH IMAGE
+mask = createMask(ROI);
+
+% ------------------------------------
+
+% This applies the mask you just created to ALL the images in the series
+
+for k = 1:length(IR_data)
+    meanSI_IR(k) = mean ( IR_data(k).img(mask)) ;
+end
+    
+% Now, you have your mean signal intensity for the ROI across all TIs
+meanSI_IR_WM = meanSI_IR
+
+% And your TIs
+TI_IR
+
+%% CSF
+figure
+
+forROIdrawing = IR_data(1).img;
+image(IR_data(1).img);
+colormap ("gray");  axis square
+
+% -----------------------------------------
+% Use "drawcircle"to selective a decent size ROI from center of image. 
+
+display('**********************')
+display('***** Draw ROI CSF! ******')
+display('**********************')
+
+title('Draw ROI CSF!', 'FontSize', 18)
+
+ROI = drawcircle(gca);  %% PLEASE INTERACT WITH IMAGE
+mask = createMask(ROI);
+
+% ------------------------------------
+
+% This applies the mask you just created to ALL the images in the series
+
+for k = 1:length(IR_data)
+    meanSI_IR(k) = mean ( IR_data(k).img(mask)) ;
+end
+    
+% Now, you have your mean signal intensity for the ROI across all TIs
+meanSI_IR_CSF = meanSI_IR
+
+% And your TIs
+TI_IR
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%  Plot SI versus TI
+figure
+plot (TI_IR, meanSI_IR_GM, 'bo'); hold on
+plot(TI_IR, meanSI_IR_GM, 'r-')
+plot (TI_IR, meanSI_IR_WM, 'bo');  
+plot(TI_IR, meanSI_IR_WM, 'r-')
+plot (TI_IR, meanSI_IR_CSF, 'bo');  
+plot(TI_IR, meanSI_IR_CSF, 'r-')
+hold off
+title ('SI versus TI -- Inversion Recovery', 'FontSize', 18)
+xlabel(' TI (ms)', 'FontSize', 14)
+ylabel('SI (AU)', 'FontSize', 14)
+
+% -----------------------------------
+%% Fixing the data
+min_all = 10^9;
+for i = 1:length(meanSI_IR_GM)
+
+    if min_all > meanSI_IR_GM(i)
+            min_all = meanSI_IR_GM(i);
+            y_new_data_GM(i) = -meanSI_IR_GM(i);
+    else
+            y_new_data_GM(i) = meanSI_IR_GM(i);
+    end
+end
+min_all = 10^9;
+for i = 1:length(meanSI_IR_WM)
+
+    if min_all > meanSI_IR_WM(i)
+            min_all = meanSI_IR_WM(i);
+            y_new_data_WM(i) = -meanSI_IR_WM(i);
+    else
+            y_new_data_WM(i) = meanSI_IR_WM(i);
+    end
+end
+min_all = 10^9;
+for i = 1:length(meanSI_IR_CSF)
+
+    if min_all > meanSI_IR_CSF(i)
+            min_all = meanSI_IR_CSF(i);
+            y_new_data_CSF(i) = -meanSI_IR_CSF(i);
+    else
+            y_new_data_CSF(i) = meanSI_IR_CSF(i);
+    end
+end
+% bring_to_0 = abs(min(y_new_data));
+% for i = 1:length(y_new_data)
+%     y_new_data(i) = y_new_data(i) + bring_to_0;
+% end
+y_new_data_WM(3) = -y_new_data_WM(3);
+
+y_new_data_GM() = y_new_data_GM();
+
+
+y_new_data_CSF(4) = -y_new_data_CSF(4);
+y_new_data_CSF(13) = -y_new_data_CSF(13);
+
+
+%%  Plot SI versus TI
+figure
+plot (TI_IR, y_new_data_GM, 'bo'); hold on
+plot(TI_IR,  y_new_data_GM, 'r-')
+plot (TI_IR, y_new_data_WM, 'bo');  
+plot(TI_IR,  y_new_data_WM, 'b-')
+plot (TI_IR, y_new_data_CSF, 'bo');  
+plot(TI_IR,  y_new_data_CSF, 'g-')
+hold off
+title ('SI versus TI -- Inversion Recovery', 'FontSize', 18)
+xlabel(' TI (ms)', 'FontSize', 14)
+ylabel('SI (AU)', 'FontSize', 14)
+
+%% Fitting
+
+% xdata = TI_IR;
+% ydata = y_new_data;
+% M0_init = y_new_data(end);
+% T1_water_init = 500;
+% Mz0 = y_new_data(1);
+% % x(1) = M0
+% % x(2) = T1_water
+% % x(3) = Mz0
+% % fun = @(x,xdata)x(1)*(1-exp(-xdata/x(2)));
+% fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+% x0 = [M0_init,T1_water_init, Mz0];
+% x = lsqcurvefit(fun,x0,xdata,ydata)
+% figure;
+% times = linspace(0,10000);
+% plot(xdata,ydata,'ko',times,fun(x,times),'b-')
+% legend('Data','Fitted exponential')
+% title('Data and Fitted Curve')
+
+
+
+
+
+
+
+
+
+%%
+% GM
+xdata = TI_IR;
+ydata_GM = y_new_data_GM;
+M0_init_GM = -y_new_data_GM(end);
+T1_water_init = 500;
+Mz0_GM = y_new_data_GM(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_GM,T1_water_init, Mz0_GM];
+x_GM = lsqcurvefit(fun,x0,xdata,ydata_GM)
+times = linspace(0,3000, 300000);
+
+% WM
+xdata = TI_IR;
+ydata_WM = y_new_data_WM;
+M0_init_WM = -y_new_data_WM(end);
+T1_water_init = 500;
+Mz0_WM = y_new_data_WM(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_WM,T1_water_init, Mz0_WM];
+x_WM = lsqcurvefit(fun,x0,xdata,ydata_WM)
+times = linspace(0,3000, 300000);
+
+% CSF
+xdata = TI_IR;
+ydata_CSF = y_new_data_CSF;
+M0_init_CSF = -y_new_data_CSF(end);
+T1_water_init = 500;
+Mz0_CSF = y_new_data_CSF(1);
+% x(1) = M0
+% x(2) = T1_water
+% x(3) = Mz0
+fun = @(x,xdata)x(3)*exp(-xdata/x(2))+x(1)*(1-exp(-xdata/x(2)));
+x0 = [M0_init_CSF,T1_water_init, Mz0_CSF];
+x_CSF = lsqcurvefit(fun,x0,xdata,ydata_CSF)
+times = linspace(0,3000, 300000);
+
+
+%%
+% Get values of each curve at y = 0
+x_intersect_GM = interp1(fun(x_GM, times), times, 0);
+y_intersect_GM = 0;
+
+x_intersect_WM = interp1(fun(x_WM, times), times, 0);
+y_intersect_WM = 0;
+
+x_intersect_CSF = interp1(fun(x_CSF, times), times, 0);
+y_intersect_CSF = 0;
+
+% Display the values
+fprintf('Intersection with y=0 for GM: (%f, %f)\n', x_intersect_GM, y_intersect_GM);
+fprintf('Intersection with y=0 for WM: (%f, %f)\n', x_intersect_WM, y_intersect_WM);
+fprintf('Intersection with y=0 for CSF: (%f, %f)\n', x_intersect_CSF, y_intersect_CSF);
+
+
+%%
+
+
+figure;
+
+plot(xdata,ydata_GM    ,'bo', times,fun(x_GM    ,times),'b-')
+hold on
+plot(xdata,ydata_WM,'ro', times,fun(x_WM,times),'r-')
+plot(xdata,ydata_CSF    ,'go', times,fun(x_CSF    ,times),'g-')
+% Add a dashed line at y=0
+yline(0, '--');
+
+% Plot intersection points
+y_GM = interp1(fun(x_GM, times), times, 0);
+y_WM = interp1(fun(x_WM, times), times, 0);
+y_CSF = interp1(fun(x_CSF, times), times, 0);
+plot(y_GM, 0, 'kx', 'MarkerSize', 10)
+hold on
+plot(y_WM, 0, 'kx', 'MarkerSize', 10)
+plot(y_CSF, 0, 'kx', 'MarkerSize', 10)
+hold off
+
+hold off
+% Add text boxes with intersection values
+text(y_GM-50, 20, sprintf('GM: %.1f ms', y_GM),'FontSize',20);
+text(y_WM-150, -20, sprintf('WM: %.1f ms', y_WM),'FontSize',20);
+text(y_CSF, -20, sprintf('CSF: %.1f ms', y_CSF),'FontSize',20);
+
+lgd = legend('Data Grey Matter','Fitted curve GM','Data White Matter','Fitted curve WM','Data CSF','Fitted curve CSF','Location', 'east');
+lgd.FontSize = 25;
+xx = xlabel('time (ms)');
+yy = ylabel('Mz');
+xx.FontSize = 20;
+yy.FontSize = 20;
+set(gca,'FontSize',25)
+title ('SI versus TI -- Inversion Recovery', 'FontSize',25)
+
+
+
+
